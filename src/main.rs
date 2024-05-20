@@ -32,12 +32,6 @@ impl CPU {
         (self).memory[addr as usize] = value; 
     }
 
-    fn fetch_next_pc(&mut self) -> u8 {
-        let next_instruction: u16 = self.pc;
-        self.pc += 1;
-        self.memory[next_instruction as usize]
-    }
-
     fn update_negative_and_zero_bits(&mut self, value: u8) {
         if value == 0 {
             self.status.set(CpuStatus::ZERO);
@@ -57,28 +51,27 @@ impl CPU {
         self.update_negative_and_zero_bits(value)
     }
 
-    fn decode_and_execute(&mut self, opcode: u8) {
-        match opcode {
-           0xA9 => {
-               let param = self.fetch_next_pc();
-               self.lda(param);
-           }
-           _ => todo!(),
-        } 
-    }
-
-    fn run(&mut self) {
+    fn interpret(&mut self, program: Vec<u8>) {
         loop {
-            let opcode = self.fetch_next_pc();
-            self.decode_and_execute(opcode);
-            // Implement interrupt handling and cycle management
+            //let opcode = self.fetch_next_pc();
+            let opcode = program[self.pc as usize];
+            self.pc += 1;
+            match opcode {
+                0xA9 => {
+                    let param = program[self.pc as usize];
+                    self.pc += 1;
+                    self.lda(param);
+                }
+                0x00 => break,
+                _ => todo!(),
+            } 
         }
     }
 }
 
 fn main() {
     let mut cpu = CPU::new();
-    cpu.run();
+    //cpu.run();
 }
 
 #[cfg(test)]
@@ -105,18 +98,9 @@ mod tests {
     }
 
     #[test]
-    fn test_fetch_opcode() {
-        let mut cpu = CPU::new();
-        cpu.memory[0x0000] = 0xA9; // LDA immediate opcode
-        assert_eq!(cpu.fetch_next_pc(), 0xA9);
-        assert_eq!(cpu.pc, 1);
-    }
-
-    #[test]
     fn test_lda_immediate() {
         let mut cpu = CPU::new();
-        cpu.write(cpu.pc , 0x06);
-        cpu.decode_and_execute(0xA9);
+        cpu.interpret(vec![0xA9, 0x06,0x00]);
         assert_eq!(cpu.a, 0x06);
         assert!(!cpu.status.is_set(CpuStatus::NEGATIVE));
         assert!(!cpu.status.is_set(CpuStatus::ZERO));
@@ -125,8 +109,7 @@ mod tests {
     #[test]
     fn test_lda_immediate_zero() {
         let mut cpu = CPU::new();
-        cpu.write(cpu.pc , 0x00);
-        cpu.decode_and_execute(0xA9);
+        cpu.interpret(vec![0xA9, 0x00,0x00]);
         assert_eq!(cpu.a, 0x00);
         assert!(cpu.status.is_set(CpuStatus::ZERO));
     }
