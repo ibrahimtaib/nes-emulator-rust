@@ -114,6 +114,16 @@ mod tests {
         cpu.write(cpu.pc , 0x06);
         cpu.decode_and_execute(0xA9);
         assert_eq!(cpu.a, 0x06);
+        assert!(!cpu.status.is_set(CpuStatus::NEGATIVE));
+        assert!(!cpu.status.is_set(CpuStatus::ZERO));
+    }
+
+    #[test]
+    fn test_lda_immediate_zero() {
+        let mut cpu = CPU::new();
+        cpu.write(cpu.pc , 0x00);
+        cpu.decode_and_execute(0xA9);
+        assert_eq!(cpu.a, 0x00);
+        assert!(cpu.status.is_set(CpuStatus::ZERO));
     }
 }
-
