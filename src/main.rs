@@ -51,6 +51,11 @@ impl CPU {
         self.update_negative_and_zero_bits(value)
     }
 
+    fn tax(&mut self) {
+        self.x = self.a;
+        self.update_negative_and_zero_bits(self.x);
+    }
+
     fn interpret(&mut self, program: Vec<u8>) {
         loop {
             //let opcode = self.fetch_next_pc();
@@ -61,7 +66,8 @@ impl CPU {
                     let param = program[self.pc as usize];
                     self.pc += 1;
                     self.lda(param);
-                }
+                },
+                0xAA => self.tax(),
                 0x00 => break,
                 _ => todo!(),
             } 
@@ -111,6 +117,23 @@ mod tests {
         let mut cpu = CPU::new();
         cpu.interpret(vec![0xA9, 0x00,0x00]);
         assert_eq!(cpu.a, 0x00);
+        assert!(cpu.status.is_set(CpuStatus::ZERO));
+    }
+
+    #[test]
+    fn test_tax() {
+        let mut cpu = CPU::new();
+        cpu.a = 0xFF;
+        cpu.interpret(vec![0xAA,0x00]);
+        assert_eq!(cpu.x, cpu.a);
+        assert!(cpu.status.is_set(CpuStatus::NEGATIVE));
+    }
+
+    #[test]
+    fn test_tax_zero() {
+        let mut cpu = CPU::new();
+        cpu.interpret(vec![0xAA,0x00]);
+        assert_eq!(cpu.x, cpu.a);
         assert!(cpu.status.is_set(CpuStatus::ZERO));
     }
 }
