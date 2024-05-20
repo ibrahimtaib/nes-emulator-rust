@@ -38,26 +38,30 @@ impl CPU {
         self.memory[next_instruction as usize]
     }
 
-    fn get_addressing_mode(&mut self) {
+    fn update_negative_and_zero_bits(&mut self, value: u8) {
+        if value == 0 {
+            self.status.set(CpuStatus::ZERO);
+        } else {
+            self.status.clear(CpuStatus::ZERO);
+        }
+
+        if value & 0x80 != 0 {
+            self.status.set(CpuStatus::NEGATIVE);
+        } else {
+            self.status.clear(CpuStatus::NEGATIVE);
+        }
+    }
+
+    fn lda(&mut self, value: u8) {
+        self.a = value;
+        self.update_negative_and_zero_bits(value)
     }
 
     fn decode_and_execute(&mut self, opcode: u8) {
         match opcode {
            0xA9 => {
                let param = self.fetch_next_pc();
-               self.a = param;
-               
-               if self.a == 0 {
-                   self.status.set(CpuStatus::ZERO);
-               } else {
-                   self.status.clear(CpuStatus::ZERO);
-               }
-
-               if self.a & 0x80 != 0 {
-                   self.status.set(CpuStatus::NEGATIVE);
-               } else {
-                   self.status.clear(CpuStatus::NEGATIVE);
-               }
+               self.lda(param);
            }
            _ => todo!(),
         } 
