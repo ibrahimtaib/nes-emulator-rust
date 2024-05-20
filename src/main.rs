@@ -15,7 +15,7 @@ impl CPU {
     fn new() -> Self {
         CPU {
            pc: 0,
-           sp: 0,
+           sp: 0xFD,
            a: 0,
            x: 0,
            y: 0,
@@ -28,8 +28,17 @@ impl CPU {
         self.memory[addr as usize]
     }
 
+    fn mem_read_u16(&self, addr: u16) -> u16 {
+        self.read(addr) as u16 | (self.read(addr + 1) as u16) << 8 
+    }
+
     fn write(&mut self, addr: u16, value: u8) {
         (self).memory[addr as usize] = value; 
+    }
+
+    fn mem_write_u16(&mut self, addr: u16, value: u16) {
+        self.write(addr, (value & 0xFF) as u8);
+        self.write(addr + 1, (value >> 8) as u8);
     }
 
     fn update_negative_and_zero_bits(&mut self, value: u8) {
@@ -88,7 +97,7 @@ mod tests {
     fn test_cpu_initialization() {
         let cpu = CPU::new();
         assert_eq!(cpu.pc, 0);
-        assert_eq!(cpu.sp, 0);
+        assert_eq!(cpu.sp, 0xFD);
         assert_eq!(cpu.a, 0);
         assert_eq!(cpu.x, 0);
         assert_eq!(cpu.y, 0);
@@ -135,5 +144,22 @@ mod tests {
         cpu.interpret(vec![0xAA,0x00]);
         assert_eq!(cpu.x, cpu.a);
         assert!(cpu.status.is_set(CpuStatus::ZERO));
+    }
+
+    #[test]
+    fn test_mem_read_u16() {
+        let mut cpu: CPU = CPU::new();
+        cpu.write(0x00, 0x01);
+        cpu.write(0x01, 0x10);
+
+        assert_eq!(cpu.mem_read_u16(0x00), 0x1001);
+    }
+    
+    #[test]
+    fn test_mem_write_u16() {
+        let mut cpu: CPU = CPU::new();
+        cpu.mem_write_u16(0x0000, 0x1001);  
+        assert_eq!(cpu.read(0x0000), 0x01);
+        assert_eq!(cpu.read(0x0001), 0x10);
     }
 }
