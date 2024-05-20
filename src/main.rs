@@ -1,10 +1,13 @@
+mod cpu_status;
+use cpu_status::CpuStatus;
+
 struct CPU {
     pc: u16,
     sp: u8,
     a: u8,
     x: u8,
     y: u8,
-    status: u8,
+    status: CpuStatus,
     memory: [u8; 0x10000],
 }
 
@@ -16,7 +19,7 @@ impl CPU {
            a: 0,
            x: 0,
            y: 0,
-           status: 0,
+           status: CpuStatus::new(),
            memory: [0; 0x10000], 
         }
     }
@@ -43,6 +46,18 @@ impl CPU {
            0xA9 => {
                let param = self.fetch_next_pc();
                self.a = param;
+               
+               if self.a == 0 {
+                   self.status.set(CpuStatus::ZERO);
+               } else {
+                   self.status.clear(CpuStatus::ZERO);
+               }
+
+               if self.a & 0x80 != 0 {
+                   self.status.set(CpuStatus::NEGATIVE);
+               } else {
+                   self.status.clear(CpuStatus::NEGATIVE);
+               }
            }
            _ => todo!(),
         } 
@@ -74,7 +89,7 @@ mod tests {
         assert_eq!(cpu.a, 0);
         assert_eq!(cpu.x, 0);
         assert_eq!(cpu.y, 0);
-        assert_eq!(cpu.status, 0);
+        assert_eq!(cpu.status.get(), 0);
         assert_eq!(cpu.memory[0], 0);
     }
 
