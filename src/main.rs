@@ -1,5 +1,8 @@
 mod cpu_status;
+mod addressing_mode;
 use cpu_status::CpuStatus;
+use addressing_mode::AddressingMode;
+
 
 struct CPU {
     pc: u16,
@@ -24,11 +27,11 @@ impl CPU {
         }
     }
 
-    fn read(&self, addr: u16) -> u8 {
+    fn read(&mut self, addr: u16) -> u8 {
         self.memory[addr as usize]
     }
 
-    fn mem_read_u16(&self, addr: u16) -> u16 {
+    fn mem_read_u16(&mut self, addr: u16) -> u16 {
         self.read(addr) as u16 | (self.read(addr + 1) as u16) << 8 
     }
 
@@ -81,7 +84,42 @@ impl CPU {
         self.read(next_instruction)
     }
 
-    fn lda(&mut self, value: u8) {
+    fn get_addressing_operator(&mut self, mode: AddressingMode) -> u16 {
+        match mode {
+            AddressingMode::ZeroPage => {
+                self.fetch_next_pc() as u16
+            },
+            AddressingMode::ZeroPageX => {
+                self.fetch_next_pc().wrapping_add(self.x) as u16
+            }
+            AddressingMode::Immediate => {
+                let address = self.pc;
+                self.pc += 1;
+                address
+            },
+            AddressingMode::Absolute => {
+                let address : u16 = self.mem_read_u16(self.pc);
+                self.pc += 2;
+                address
+            },
+            AddressingMode::AbsoluteX => {
+                let address = self.mem_read_u16(self.pc).wrapping_add(self.x as u16);
+                self.pc += 2;
+                address
+            },
+            AddressingMode::AbsoluteY => {
+                let address = self.mem_read_u16(self.pc).wrapping_add(self.y as u16);
+                self.pc += 2;
+                address
+            },
+            _ => todo!(),
+            
+        }
+    }
+
+    fn lda(&mut self, mode: AddressingMode) {
+        let operator = self.get_addressing_operator(mode);
+        let value = self.read(operator);
         self.a = value;
         self.update_negative_and_zero_bits(value)
     }
@@ -97,12 +135,11 @@ impl CPU {
             let opcode = self.fetch_next_pc();
             match opcode {
                 0xA9 => {
-                    let param = self.fetch_next_pc();
-                    self.lda(param);
+                    self.lda(AddressingMode::Immediate);
                 },
                 0xAA => self.tax(),
                 0x00 => break,
-                _ => todo!(),
+                rest => todo!(),
             } 
         }
     }
