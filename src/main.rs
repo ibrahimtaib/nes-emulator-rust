@@ -119,6 +119,7 @@ impl CPU {
 
     fn lda(&mut self, mode: AddressingMode) {
         let operator = self.get_addressing_operator(mode);
+        println!("{:}", operator);
         let value = self.read(operator);
         self.a = value;
         self.update_negative_and_zero_bits(value)
@@ -134,9 +135,10 @@ impl CPU {
         loop {
             let opcode = self.fetch_next_pc();
             match opcode {
-                0xA9 => {
-                    self.lda(AddressingMode::Immediate);
-                },
+                0xA9 => self.lda(AddressingMode::Immediate),
+                0xA5 => self.lda(AddressingMode::ZeroPage),
+                0xB5 => self.lda(AddressingMode::ZeroPageX),
+                0xAD => self.lda(AddressingMode::Absolute),
                 0xAA => self.tax(),
                 0x00 => break,
                 rest => todo!(),
@@ -188,6 +190,28 @@ mod tests {
         cpu.load_and_run(vec![0xA9, 0x00,0x00]);
         assert_eq!(cpu.a, 0x00);
         assert!(cpu.status.is_set(CpuStatus::ZERO));
+    }
+
+    #[test]
+    fn test_lda_zero_page() {
+        let mut cpu = CPU::new();
+        cpu.write(0xFF, 0x32);
+        cpu.load_and_run(vec![0xA5, 0xFF,0x00]);
+        assert_eq!(cpu.a, 0x32);
+    }
+
+    #[test] fn test_lda_zero_page_x() {
+        let mut cpu = CPU::new();
+        cpu.write(0xFF, 0x32);
+        cpu.load_and_run(vec![0xA9, 0x05, 0xAA, 0xB5, 0xFA,0x00]);
+        assert_eq!(cpu.a, 0x32);
+    }
+
+    #[test] fn test_lda_absolute() {
+        let mut cpu = CPU::new();
+        cpu.write(0x1234, 0x56);
+        cpu.load_and_run(vec![0xAD, 0x34, 0x12,0x00]);
+        assert_eq!(cpu.a, 0x56);
     }
 
     #[test]
